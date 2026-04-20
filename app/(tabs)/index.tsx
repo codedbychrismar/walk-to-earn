@@ -18,34 +18,18 @@ const colors = {
   white: '#FFFFFF',
 };
 
-// Simple map mockup using plain Views — no react-native-svg needed
 function MapMockup() {
   return (
     <View style={{ flex: 1, backgroundColor: '#1e4d2b', overflow: 'hidden' }}>
-      {/* Road horizontal */}
-      <View style={{
-        position: 'absolute', top: '46%', left: 0, right: 0,
-        height: 14, backgroundColor: '#2e7d32', opacity: 0.9,
-      }} />
-      {/* Road vertical left */}
-      <View style={{
-        position: 'absolute', top: 0, bottom: 0, left: '29%',
-        width: 11, backgroundColor: '#2e7d32', opacity: 0.9,
-      }} />
-      {/* Road vertical right */}
-      <View style={{
-        position: 'absolute', top: 0, bottom: 0, left: '72%',
-        width: 9, backgroundColor: '#2e7d32', opacity: 0.8,
-      }} />
-      {/* Buildings top */}
+      <View style={{ position: 'absolute', top: '46%', left: 0, right: 0, height: 14, backgroundColor: '#2e7d32', opacity: 0.9 }} />
+      <View style={{ position: 'absolute', top: 0, bottom: 0, left: '29%', width: 11, backgroundColor: '#2e7d32', opacity: 0.9 }} />
+      <View style={{ position: 'absolute', top: 0, bottom: 0, left: '72%', width: 9, backgroundColor: '#2e7d32', opacity: 0.8 }} />
       <View style={{ position: 'absolute', top: 38, left: 18, width: 92, height: 84, borderRadius: 8, backgroundColor: '#0f3d1e' }} />
       <View style={{ position: 'absolute', top: 20, left: 136, width: 110, height: 92, borderRadius: 8, backgroundColor: '#0a2e15' }} />
       <View style={{ position: 'absolute', top: 48, right: 18, width: 92, height: 82, borderRadius: 8, backgroundColor: '#0f3d1e' }} />
-      {/* Buildings bottom */}
       <View style={{ position: 'absolute', bottom: 46, left: 28, width: 84, height: 100, borderRadius: 8, backgroundColor: '#0a2e15' }} />
       <View style={{ position: 'absolute', bottom: 34, left: '39%', width: 132, height: 120, borderRadius: 8, backgroundColor: '#0f3d1e' }} />
       <View style={{ position: 'absolute', bottom: 40, right: 18, width: 60, height: 90, borderRadius: 8, backgroundColor: '#0a2e15' }} />
-      {/* Location dot */}
       <View style={{
         position: 'absolute', top: '44%', left: '48%',
         width: 68, height: 68, borderRadius: 34,
@@ -70,9 +54,10 @@ function MapMockup() {
 
 export default function Walk() {
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <View className="min-h-screen">
+        {/* Removed min-h-screen — causes unnecessary layout work on web */}
+        <View style={{ paddingBottom: 100 }}>
           {/* Header */}
           <View className="px-5 pt-12 pb-4 flex-row justify-between items-center">
             <Text className="text-[26px] font-extrabold tracking-tight" style={{ color: colors.n800 }}>
@@ -93,11 +78,7 @@ export default function Walk() {
               <View className="flex-row gap-2 flex-wrap">
                 <View
                   className="px-3.5 py-2 rounded-full flex-row items-center gap-2"
-                  style={{
-                    backgroundColor: 'rgba(255,255,255,0.16)',
-                    borderWidth: 1,
-                    borderColor: 'rgba(255,255,255,0.26)',
-                  }}
+                  style={{ backgroundColor: 'rgba(255,255,255,0.16)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.26)' }}
                 >
                   <View className="w-2 h-2 rounded-full" style={{ backgroundColor: '#4ade80' }} />
                   <Text className="text-[13px] font-bold text-white">3.2 km/h</Text>
@@ -105,21 +86,14 @@ export default function Walk() {
 
                 <View
                   className="px-3.5 py-2 rounded-full flex-row items-center gap-1.5"
-                  style={{
-                    backgroundColor: 'rgba(245,158,11,0.24)',
-                    borderWidth: 1,
-                    borderColor: 'rgba(245,158,11,0.36)',
-                  }}
+                  style={{ backgroundColor: 'rgba(245,158,11,0.24)', borderWidth: 1, borderColor: 'rgba(245,158,11,0.36)' }}
                 >
                   <Star size={12} fill="#fbbf24" stroke="none" />
-                  <Text className="text-xs font-extrabold" style={{ color: '#fbbf24' }}>
-                    Boost 4:21
-                  </Text>
+                  <Text className="text-xs font-extrabold" style={{ color: '#fbbf24' }}>Boost 4:21</Text>
                 </View>
               </View>
 
               <View className="flex-row justify-between items-end gap-3">
-                {/* Start Walk button — gradient replaced with solid green */}
                 <TouchableOpacity
                   activeOpacity={0.8}
                   className="flex-1 min-w-[190px] rounded-full shadow-2xl px-5 py-4 flex-row items-center justify-center gap-2"
@@ -131,11 +105,7 @@ export default function Walk() {
 
                 <View
                   className="px-3 py-2 rounded-2xl flex-row items-center gap-2"
-                  style={{
-                    backgroundColor: 'rgba(255,255,255,0.14)',
-                    borderWidth: 1,
-                    borderColor: 'rgba(255,255,255,0.16)',
-                  }}
+                  style={{ backgroundColor: 'rgba(255,255,255,0.14)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.16)' }}
                 >
                   <Clock size={14} color="white" strokeWidth={2} />
                   <Text className="text-xs font-extrabold text-white">12:34</Text>
@@ -180,12 +150,8 @@ export default function Walk() {
                 <Play size={20} fill={colors.g500} stroke={colors.g500} />
               </View>
               <View className="flex-1">
-                <Text className="text-base font-extrabold mb-0.5" style={{ color: colors.n800 }}>
-                  Get Boost
-                </Text>
-                <Text className="text-xs" style={{ color: colors.n600 }}>
-                  Watch and earn ×1.5
-                </Text>
+                <Text className="text-base font-extrabold mb-0.5" style={{ color: colors.n800 }}>Get Boost</Text>
+                <Text className="text-xs" style={{ color: colors.n600 }}>Watch and earn ×1.5</Text>
               </View>
               <TouchableOpacity
                 activeOpacity={0.7}

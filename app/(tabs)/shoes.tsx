@@ -1,21 +1,24 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Pressable, ScrollView, Text, View } from 'react-native';
+import { Animated, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 
-// Replaced react-native-reanimated with core RN Animated API
+// Only animate on native — on web the JS-driven loop causes serious lag
 function AnimatedButton({ children }: { children: React.ReactNode }) {
     const scale = useRef(new Animated.Value(1)).current;
 
     useEffect(() => {
-        Animated.loop(
+        if (Platform.OS === 'web') return; // skip animation entirely on web
+        const anim = Animated.loop(
             Animated.sequence([
                 Animated.timing(scale, { toValue: 1.05, duration: 800, useNativeDriver: true }),
                 Animated.timing(scale, { toValue: 1, duration: 800, useNativeDriver: true }),
             ])
-        ).start();
+        );
+        anim.start();
+        return () => anim.stop();
     }, []);
 
     return (
-        <Animated.View style={{ transform: [{ scale }] }}>
+        <Animated.View style={Platform.OS !== 'web' ? { transform: [{ scale }] } : undefined}>
             {children}
         </Animated.View>
     );

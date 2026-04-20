@@ -24,7 +24,7 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        lazy: false,
+        // lazy: false removed — tabs now load on demand (default behavior)
         headerShown: false,
         tabBarShowLabel: true,
         tabBarActiveTintColor: '#16a34a',
