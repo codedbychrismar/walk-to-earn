@@ -4,7 +4,6 @@ import React from 'react';
 import { Pressable } from 'react-native';
 
 function SimpleIcon({ name, color, focused }: any) {
-  // No animation, just render the icon (optionally change size when focused)
   return <Ionicons name={name} size={focused ? 26 : 24} color={color} />;
 }
 
@@ -25,7 +24,7 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        lazy: true,
+        lazy: false,
         headerShown: false,
         tabBarShowLabel: true,
         tabBarActiveTintColor: '#16a34a',

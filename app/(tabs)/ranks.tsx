@@ -99,7 +99,7 @@ export default function Ranks() {
     ];
 
     return (
-        <SafeAreaView className="flex-1 bg-white">
+        <SafeAreaView className=" bg-white" style={{ flex: 1 }}>
             <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
                 <View className="min-h-screen pb-4">
                     {/* Header */}
