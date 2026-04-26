@@ -1,4 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
+import { Crown } from 'lucide-react-native';
 import { useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -181,7 +182,7 @@ export default function Ranks() {
                                 <View className="relative mb-1">
                                     {person.crown && (
                                         <View className="absolute -top-5 left-1/2 -translate-x-1/2 z-10">
-                                            <Text className="text-xl">👑</Text>
+                                            <Crown size={20} color={colors.amber} fill="#fef3c7" strokeWidth={2} />
                                         </View>
                                     )}
                                     <LinearGradient

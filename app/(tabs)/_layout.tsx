@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Tabs } from 'expo-router';
+import { Redirect, Tabs } from 'expo-router';
 import React from 'react';
-import { Pressable } from 'react-native';
+import { Pressable, View } from 'react-native';
+import { useAuth } from '@/src/features/auth/auth-state';
 
 function SimpleIcon({ name, color, focused }: any) {
   return <Ionicons name={name} size={focused ? 26 : 24} color={color} />;
@@ -21,6 +22,16 @@ function CustomTabButton(props: any) {
 }
 
 export default function TabLayout() {
+  const { isHydrating, user } = useAuth();
+
+  if (isHydrating) {
+    return <View style={{ flex: 1, backgroundColor: '#ffffff' }} />;
+  }
+
+  if (!user) {
+    return <Redirect href="/(auth)/Login" />;
+  }
+
   return (
     <Tabs
       screenOptions={{

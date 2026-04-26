@@ -1,7 +1,8 @@
-import { useRouter } from 'expo-router';
-import { Eye, EyeOff, Footprints, Lock, Mail, User } from 'lucide-react-native';
+import { Redirect, useRouter } from 'expo-router';
+import { ArrowLeft, CircleDollarSign, Eye, EyeOff, Footprints, Gift, Lock, Mail, Trophy, User } from 'lucide-react-native';
 import React, { useRef, useState } from 'react';
 import {
+    Alert,
     Animated,
     KeyboardAvoidingView,
     Platform,
@@ -13,6 +14,7 @@ import {
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '@/src/features/auth/auth-state';
 
 const colors = {
     n800: '#1F2937',
@@ -110,6 +112,7 @@ function PasswordStrength({ password }: { password: string }) {
 
 export default function Register() {
     const router = useRouter();
+    const { isHydrating, register, user } = useAuth();
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -137,13 +140,25 @@ export default function Register() {
         return Object.keys(e).length === 0;
     }
 
-    function handleRegister() {
+    async function handleRegister() {
         if (!validate()) return;
         setLoading(true);
-        setTimeout(() => {
+        try {
+            await register(name.trim(), email.trim(), password);
             setLoading(false);
             router.replace('/(tabs)');
-        }, 1400);
+        } catch (error) {
+            setLoading(false);
+            Alert.alert('Registration failed', error instanceof Error ? error.message : 'Unable to create account');
+        }
+    }
+
+    if (isHydrating) {
+        return <View style={{ flex: 1, backgroundColor: colors.white }} />;
+    }
+
+    if (user) {
+        return <Redirect href="/(tabs)" />;
     }
 
     return (
@@ -162,7 +177,7 @@ export default function Register() {
                             style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 28 }}
                             activeOpacity={0.7}
                         >
-                            <Text style={{ fontSize: 22, color: colors.n400 }}>←</Text>
+                            <ArrowLeft size={20} color={colors.n400} strokeWidth={2} />
                             <Text style={{ fontSize: 14, fontWeight: '700', color: colors.n400 }}>Back to login</Text>
                         </TouchableOpacity>
 
@@ -187,9 +202,9 @@ export default function Register() {
                         {/* Perks row */}
                         <View style={{ flexDirection: 'row', gap: 8, marginBottom: 28 }}>
                             {[
-                                { icon: '👟', label: 'Free shoe' },
-                                { icon: '🪙', label: 'Earn CELO' },
-                                { icon: '🏆', label: 'Rank up' },
+                                { icon: <Gift size={20} color={colors.g600} strokeWidth={2} />, label: 'Free shoe' },
+                                { icon: <CircleDollarSign size={20} color={colors.g600} strokeWidth={2} />, label: 'Earn CELO' },
+                                { icon: <Trophy size={20} color={colors.g600} strokeWidth={2} />, label: 'Rank up' },
                             ].map((p) => (
                                 <View key={p.label} style={{
                                     flex: 1, backgroundColor: colors.g50,
@@ -197,7 +212,7 @@ export default function Register() {
                                     borderRadius: 12, paddingVertical: 10,
                                     alignItems: 'center', gap: 4,
                                 }}>
-                                    <Text style={{ fontSize: 20 }}>{p.icon}</Text>
+                                    {p.icon}
                                     <Text style={{ fontSize: 11, fontWeight: '700', color: colors.g700 }}>{p.label}</Text>
                                 </View>
                             ))}
@@ -280,7 +295,7 @@ export default function Register() {
                                 }}
                             >
                                 <Text style={{ fontSize: 16, fontWeight: '800', color: 'white', letterSpacing: 0.2 }}>
-                                    {loading ? 'Creating account…' : 'Create Account'}
+                                    {loading ? 'Creating account...' : 'Create Account'}
                                 </Text>
                             </Pressable>
                         </Animated.View>

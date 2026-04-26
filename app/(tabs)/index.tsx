@@ -1,8 +1,9 @@
-import { Clock, PersonStanding, Play, Square, Star } from "lucide-react-native";
+import { Play, Star } from "lucide-react-native";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Platform, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { useAuth } from "@/src/features/auth/auth-state";
 import { WalkMap } from "@/src/features/walk-session/components";
 import {
   classifySpeed,
@@ -17,12 +18,6 @@ import { colors } from "@/src/shared/constants/colors";
 
 const STEPS_PER_KM = 1312;
 
-function formatClock(totalSeconds: number): string {
-  const m = Math.floor(totalSeconds / 60);
-  const s = totalSeconds % 60;
-  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-}
-
 function validityColor(validity: MovementValidity): string {
   switch (validity) {
     case "valid":
@@ -36,19 +31,20 @@ function validityColor(validity: MovementValidity): string {
 }
 
 function validityLabel(validity: MovementValidity, speedKmh: number): string {
-  if (validity === "invalid_fast") return `${speedKmh.toFixed(1)} km/h · too fast`;
-  if (validity === "still") return `${speedKmh.toFixed(1)} km/h · still`;
+  if (validity === "invalid_fast") return `${speedKmh.toFixed(1)} km/h - too fast`;
+  if (validity === "still") return `${speedKmh.toFixed(1)} km/h - still`;
   return `${speedKmh.toFixed(1)} km/h`;
 }
 
 export default function Walk() {
   const { permission, position, error, requestPermission, startTracking, stopTracking } =
     useDeviceLocation();
+  const { settleWalk, user } = useAuth();
 
   const [sessionActive, setSessionActive] = useState(false);
   const [path, setPath] = useState<DevicePosition[]>([]);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const startedAtRef = useRef<number | null>(null);
+  const syncedStepsRef = useRef(0);
+  const syncingRef = useRef(false);
 
   useEffect(() => {
     if (permission === "idle") {
@@ -57,15 +53,35 @@ export default function Walk() {
   }, [permission, requestPermission]);
 
   useEffect(() => {
-    if (!sessionActive) return;
-    startedAtRef.current = Date.now();
-    setElapsedSeconds(0);
-    const id = setInterval(() => {
-      if (startedAtRef.current == null) return;
-      setElapsedSeconds(Math.floor((Date.now() - startedAtRef.current) / 1000));
-    }, 1000);
-    return () => clearInterval(id);
-  }, [sessionActive]);
+    let cancelled = false;
+
+    async function startSession() {
+      if (
+        sessionActive ||
+        permission === "idle" ||
+        permission === "requesting" ||
+        permission === "denied" ||
+        permission === "unsupported"
+      ) {
+        return;
+      }
+
+      if (permission !== "granted") {
+        const granted = await requestPermission();
+        if (!granted || cancelled) return;
+      }
+
+      setPath([]);
+      await startTracking();
+      if (!cancelled) setSessionActive(true);
+    }
+
+    startSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [permission, requestPermission, sessionActive, startTracking]);
 
   useEffect(() => {
     if (!sessionActive || !position) return;
@@ -76,6 +92,12 @@ export default function Walk() {
     });
   }, [position, sessionActive]);
 
+  useEffect(() => {
+    return () => {
+      stopTracking();
+    };
+  }, [stopTracking]);
+
   const distanceKm = useMemo(() => {
     let km = 0;
     for (let i = 1; i < path.length; i++) km += haversineKm(path[i - 1], path[i]);
@@ -85,41 +107,36 @@ export default function Walk() {
   const speedKmh = position?.speedKmh ?? 0;
   const validity = classifySpeed(speedKmh);
   const estimatedSteps = Math.round(distanceKm * STEPS_PER_KM);
-  const earned = (estimatedSteps / 1000) * 4; // base reward per 1000 valid steps
+  const shoeMultiplier = user?.equippedShoe?.pointsMultiplier ?? 1;
+  const shoeName = user?.equippedShoe?.displayName ?? "Street Basic";
+  const backendPointsValue = ((user?.pointsBalance ?? 0) / 1000).toFixed(3);
+  const speedBadgeColor = validityColor(validity);
 
-  const handleToggleSession = async () => {
-    if (sessionActive) {
-      stopTracking();
-      setSessionActive(false);
-      return;
-    }
+  useEffect(() => {
+    syncedStepsRef.current = 0;
+  }, [user?.userId]);
 
-    if (permission !== "granted") {
-      const granted = await requestPermission();
-      if (!granted) {
-        Alert.alert(
-          "Location required",
-          Platform.OS === "web"
-            ? "Allow location access in your browser to start a walking session."
-            : "Walk-to-Earn needs your location to validate walking or jogging activity.",
-        );
-        return;
+  useEffect(() => {
+    async function syncSteps() {
+      if (!user || validity !== "valid" || syncingRef.current) return;
+      const deltaSteps = estimatedSteps - syncedStepsRef.current;
+      if (deltaSteps <= 0) return;
+
+      syncingRef.current = true;
+      try {
+        await settleWalk({
+          steps: deltaSteps,
+          distanceKm: distanceKm * (deltaSteps / Math.max(estimatedSteps, 1)),
+          avgSpeedKmh: speedKmh,
+        });
+        syncedStepsRef.current = estimatedSteps;
+      } finally {
+        syncingRef.current = false;
       }
     }
 
-    setPath([]);
-    setElapsedSeconds(0);
-    await startTracking();
-    setSessionActive(true);
-  };
-
-  useEffect(() => {
-    return () => {
-      stopTracking();
-    };
-  }, [stopTracking]);
-
-  const speedBadgeColor = validityColor(validity);
+    syncSteps();
+  }, [distanceKm, estimatedSteps, settleWalk, speedKmh, user, validity]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "white" }}>
@@ -137,15 +154,12 @@ export default function Walk() {
           </View>
 
           <View
-            className="mx-4 rounded-[28px] h-[470px] overflow-hidden shadow-2xl"
+            className="mx-4 rounded-[28px] h-[540px] overflow-hidden shadow-2xl"
             style={{ backgroundColor: colors.g700 }}
           >
             <WalkMap position={position} path={path} followUser={sessionActive} />
 
-            <View
-              style={{ pointerEvents: "box-none" }}
-              className="absolute inset-0 justify-between p-4"
-            >
+            <View style={{ pointerEvents: "box-none" }} className="absolute inset-0 p-4">
               <View className="flex-row gap-2 flex-wrap">
                 <View
                   className="px-3.5 py-2 rounded-full flex-row items-center gap-2"
@@ -155,10 +169,7 @@ export default function Walk() {
                     borderColor: "rgba(255,255,255,0.6)",
                   }}
                 >
-                  <View
-                    className="w-2 h-2 rounded-full"
-                    style={{ backgroundColor: speedBadgeColor }}
-                  />
+                  <View className="w-2 h-2 rounded-full" style={{ backgroundColor: speedBadgeColor }} />
                   <Text className="text-[13px] font-bold" style={{ color: colors.n800 }}>
                     {validityLabel(validity, speedKmh)}
                   </Text>
@@ -173,39 +184,7 @@ export default function Walk() {
                   }}
                 >
                   <Star size={12} fill="#fff" stroke="none" />
-                  <Text className="text-xs font-extrabold text-white">Boost 4:21</Text>
-                </View>
-              </View>
-
-              <View className="flex-row justify-between items-end gap-3">
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={handleToggleSession}
-                  className="flex-1 min-w-[190px] rounded-full shadow-2xl px-5 py-4 flex-row items-center justify-center gap-2"
-                  style={{ backgroundColor: sessionActive ? colors.red500 : colors.g500 }}
-                >
-                  {sessionActive ? (
-                    <Square size={16} color="white" strokeWidth={3} fill="white" />
-                  ) : (
-                    <PersonStanding size={18} color="white" strokeWidth={2} />
-                  )}
-                  <Text className="text-[17px] font-extrabold text-white tracking-wide">
-                    {sessionActive ? "Stop Walk" : "Start Walk"}
-                  </Text>
-                </TouchableOpacity>
-
-                <View
-                  className="px-3 py-2 rounded-2xl flex-row items-center gap-2"
-                  style={{
-                    backgroundColor: "rgba(255,255,255,0.14)",
-                    borderWidth: 1,
-                    borderColor: "rgba(255,255,255,0.16)",
-                  }}
-                >
-                  <Clock size={14} color="white" strokeWidth={2} />
-                  <Text className="text-xs font-extrabold text-white">
-                    {formatClock(elapsedSeconds)}
-                  </Text>
+                  <Text className="text-xs font-extrabold text-white">x{shoeMultiplier} Active</Text>
                 </View>
               </View>
             </View>
@@ -220,8 +199,7 @@ export default function Walk() {
                 Location {permission === "unsupported" ? "unavailable" : "blocked"}
               </Text>
               <Text className="text-xs" style={{ color: colors.n600 }}>
-                {error ??
-                  "Enable location permission to track valid walking or jogging movement."}
+                {error ?? "Enable location permission to track valid walking or jogging movement."}
               </Text>
             </View>
           )}
@@ -234,13 +212,13 @@ export default function Walk() {
                 color: colors.g600,
               },
               {
-                label: "Earned",
-                value: earned.toFixed(1),
+                label: "Value",
+                value: backendPointsValue,
                 color: colors.amber,
               },
               {
                 label: "Shoe",
-                value: "Runner",
+                value: shoeName,
                 color: colors.n800,
                 small: true,
               },
@@ -261,6 +239,8 @@ export default function Walk() {
                 </Text>
                 <Text
                   className="font-extrabold leading-none"
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
                   style={{ color: stat.color, fontSize: stat.small ? 18 : 22 }}
                 >
                   {stat.value}
@@ -289,7 +269,7 @@ export default function Walk() {
                   Get Boost
                 </Text>
                 <Text className="text-xs" style={{ color: colors.n600 }}>
-                  Watch and earn ×1.5
+                  Watch and earn x1.5
                 </Text>
               </View>
               <TouchableOpacity

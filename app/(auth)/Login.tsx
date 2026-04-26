@@ -1,7 +1,8 @@
-import { useRouter } from 'expo-router';
-import { Eye, EyeOff, Footprints, Lock, Mail } from 'lucide-react-native';
+import { Redirect, useRouter } from 'expo-router';
+import { Eye, EyeOff, Flame, Footprints, Lock, Mail } from 'lucide-react-native';
 import React, { useRef, useState } from 'react';
 import {
+    Alert,
     Animated,
     KeyboardAvoidingView,
     Platform,
@@ -13,6 +14,7 @@ import {
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '@/src/features/auth/auth-state';
 
 const colors = {
     n800: '#1F2937',
@@ -75,6 +77,7 @@ function InputField({ icon, placeholder, value, onChangeText, secureTextEntry, k
 
 export default function Login() {
     const router = useRouter();
+    const { isHydrating, login, user } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -88,12 +91,24 @@ export default function Login() {
         Animated.spring(buttonScale, { toValue: 1, useNativeDriver: true }).start();
     }
 
-    function handleLogin() {
+    async function handleLogin() {
         setLoading(true);
-        setTimeout(() => {
+        try {
+            await login(email.trim(), password);
             setLoading(false);
             router.replace('/(tabs)');
-        }, 1200);
+        } catch (error) {
+            setLoading(false);
+            Alert.alert('Login failed', error instanceof Error ? error.message : 'Unable to sign in');
+        }
+    }
+
+    if (isHydrating) {
+        return <View style={{ flex: 1, backgroundColor: colors.white }} />;
+    }
+
+    if (user) {
+        return <Redirect href="/(tabs)" />;
     }
 
     return (
@@ -132,7 +147,7 @@ export default function Login() {
                             backgroundColor: colors.g50, borderWidth: 1.5, borderColor: colors.g200,
                             borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 28,
                         }}>
-                            <Text style={{ fontSize: 18 }}>🔥</Text>
+                            <Flame size={18} color={colors.g600} fill={colors.g100} strokeWidth={2} />
                             <Text style={{ fontSize: 13, fontWeight: '700', color: colors.g700, flex: 1 }}>
                                 Your 7-day streak is waiting. Do not break it!
                             </Text>
@@ -183,7 +198,7 @@ export default function Login() {
                                 }}
                             >
                                 <Text style={{ fontSize: 16, fontWeight: '800', color: 'white', letterSpacing: 0.2 }}>
-                                    {loading ? 'Signing in…' : 'Sign In'}
+                                    {loading ? 'Signing in...' : 'Sign In'}
                                 </Text>
                             </Pressable>
                         </Animated.View>
